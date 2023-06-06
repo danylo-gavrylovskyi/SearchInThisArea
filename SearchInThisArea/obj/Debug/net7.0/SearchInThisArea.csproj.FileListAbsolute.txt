@@ -1,0 +1,15 @@
+C:\Meine\C#\SearchInThisArea\SearchInThisArea\bin\Debug\net7.0\SearchInThisArea.exe
+C:\Meine\C#\SearchInThisArea\SearchInThisArea\bin\Debug\net7.0\SearchInThisArea.deps.json
+C:\Meine\C#\SearchInThisArea\SearchInThisArea\bin\Debug\net7.0\SearchInThisArea.runtimeconfig.json
+C:\Meine\C#\SearchInThisArea\SearchInThisArea\bin\Debug\net7.0\SearchInThisArea.dll
+C:\Meine\C#\SearchInThisArea\SearchInThisArea\bin\Debug\net7.0\SearchInThisArea.pdb
+C:\Meine\C#\SearchInThisArea\SearchInThisArea\obj\Debug\net7.0\SearchInThisArea.csproj.AssemblyReference.cache
+C:\Meine\C#\SearchInThisArea\SearchInThisArea\obj\Debug\net7.0\SearchInThisArea.GeneratedMSBuildEditorConfig.editorconfig
+C:\Meine\C#\SearchInThisArea\SearchInThisArea\obj\Debug\net7.0\SearchInThisArea.AssemblyInfoInputs.cache
+C:\Meine\C#\SearchInThisArea\SearchInThisArea\obj\Debug\net7.0\SearchInThisArea.AssemblyInfo.cs
+C:\Meine\C#\SearchInThisArea\SearchInThisArea\obj\Debug\net7.0\SearchInThisArea.csproj.CoreCompileInputs.cache
+C:\Meine\C#\SearchInThisArea\SearchInThisArea\obj\Debug\net7.0\SearchInThisArea.dll
+C:\Meine\C#\SearchInThisArea\SearchInThisArea\obj\Debug\net7.0\refint\SearchInThisArea.dll
+C:\Meine\C#\SearchInThisArea\SearchInThisArea\obj\Debug\net7.0\SearchInThisArea.pdb
+C:\Meine\C#\SearchInThisArea\SearchInThisArea\obj\Debug\net7.0\SearchInThisArea.genruntimeconfig.cache
+C:\Meine\C#\SearchInThisArea\SearchInThisArea\obj\Debug\net7.0\ref\SearchInThisArea.dll
