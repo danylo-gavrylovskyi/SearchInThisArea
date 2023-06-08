@@ -1,116 +1,286 @@
-﻿using System.Globalization;
-using System.Text;
+﻿using System.Diagnostics;
+using System.Globalization;
 
-string file = "C:\\Meine\\C#\\SearchInThisArea\\SearchInThisArea\\ukraine_poi.csv";
-string[] dic = File.ReadAllLines(file);
-
-List<Leaf> leafs = new List<Leaf>();
-foreach (string point in dic)
-{
-leafs.Add(new Leaf(point));
-}
-Console.WriteLine("input longitude:");
-string longitude = Console.ReadLine()!;
 Console.WriteLine("Input latitude:");
-string latitude = Console.ReadLine()!;
-Console.WriteLine("Input Radius:");
-double R = double.Parse(Console.ReadLine()!);
-Leaf userPoint = new Leaf(longitude, latitude);
-foreach (Leaf _leaf in leafs)
-{
-if (_leaf.IsInCircle(userPoint, R))
-{
-Console.WriteLine(_leaf);
-}
-}
+double userLatitude = Convert.ToDouble(Console.ReadLine(), CultureInfo.InvariantCulture);
+Console.WriteLine("Input longitude:");
+double userLongitude = Convert.ToDouble(Console.ReadLine(), CultureInfo.InvariantCulture);
+Console.WriteLine("Input radius:");
+double radius = Convert.ToDouble(Console.ReadLine(), CultureInfo.InvariantCulture);
 
+Stopwatch swBuild = new();
+Stopwatch swSearch = new();
+swBuild.Start();
+RTree tree = new();
+tree.BuildTree();
+swBuild.Stop();
+
+swSearch.Start();
+List<Point> result = tree.SearchInThisArea(userLatitude, userLongitude, radius);
+Console.OutputEncoding = System.Text.Encoding.UTF8;
+for (int i = 0; i < result.Count; i++)
+{
+    Console.WriteLine($"Latitude: {result[i].latitude}, longitude: {result[i].longitude}, {result[i].type1}, {result[i].type2}, {result[i].name1}, {result[i].name2}");
+}
+swSearch.Stop();
+Console.WriteLine($"Building elapsed time: {swBuild.Elapsed}");
+Console.WriteLine($"Searching elapsed time: {swSearch.Elapsed}");
 class Leaf
 {
-    public double longitude;
     public double latitude;
-    private string description;
-
-    public Leaf(string str)
+    public double longitude;
+    public Leaf(double latitude, double longitude)
     {
-        string[] loc = str.Split(';');
-        double.TryParse(loc[0], out longitude);
-        double.TryParse(loc[1], out latitude);
-        description = "";
-        for (int i = loc.Length - 1; i > 1; i--)
-            description += loc[i];
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
+}
+class RTree
+{
+    private RectNode rootNode;
+
+    public void BuildTree()
+    {
+        string fileName = "C:\\Meine\\C#\\SearchInThisArea\\SearchInThisArea\\ukraine_poi.csv";
+        string[] lines = File.ReadAllLines(fileName);
+        double minLatitude = double.MaxValue;
+        double maxLatitude = double.MinValue;
+        double minLongitude = double.MaxValue;
+        double maxLongitude = double.MinValue;
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string[] data = lines[i].Split(';');
+            if (data[0] == "" || data[1] == "")
+            {
+                continue;
+            }
+            double latitude = Convert.ToDouble(data[0], CultureInfo.InvariantCulture);
+            double longitude = Convert.ToDouble(data[1], CultureInfo.InvariantCulture);
+
+            minLatitude = latitude < minLatitude ? latitude : minLatitude;
+            maxLatitude = latitude > maxLatitude ? latitude : maxLatitude;
+            minLongitude = longitude < minLongitude ? longitude : minLongitude;
+            maxLongitude = longitude > maxLongitude ? longitude : maxLongitude;
+        }
+
+        rootNode = new RectNode(minLatitude, maxLatitude, minLongitude, maxLongitude);
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string[] data = lines[i].Split(';');
+            if (data[0] == "" || data[1] == "")
+            {
+                continue;
+            }
+            double latitude = Convert.ToDouble(data[0], CultureInfo.InvariantCulture);
+            double longitude = Convert.ToDouble(data[1], CultureInfo.InvariantCulture);
+            string type1 = data[2];
+            string type2 = data[3];
+            string name1 = data[4];
+            string name2 = data[5];
+
+            rootNode.Add(new Point(latitude, longitude, type1, type2, name1, name2));
+        }
+
+        rootNode.RectangleSplit();
     }
 
-    public Leaf(string longitude, string latitude)
+    public List<Point> SearchInThisArea(double latitude, double longitude, double radius)
     {
-        double.TryParse(longitude, out this.longitude);
-        double.TryParse(latitude, out this.latitude);
-        description = "";
+        RectNode rect = new RectNode(latitude - radius, latitude + radius, longitude - radius, longitude + radius);
+        List<Point> result = new List<Point>();
+        SearchInNode(rootNode, rect, result, radius, latitude, longitude);
+        return result;
     }
 
-    public static double Distance(Leaf l1, Leaf l2)
+    private void SearchInNode(RectNode current, RectNode searchingNode, List<Point> result, double radius, double x, double y)
     {
-        double earthRadius = 6371;
-        double deltaLatitude = DegreeToRadian(l1.latitude - l2.latitude);
-        double deltaLongitude = DegreeToRadian(l1.longitude - l2.longitude);
-
-        double a = Math.Sin(deltaLatitude / 2) * Math.Sin(deltaLatitude / 2) +
-                   Math.Cos(DegreeToRadian(l2.latitude)) * Math.Cos(DegreeToRadian(l1.latitude)) *
-                   Math.Sin(deltaLongitude / 2) * Math.Sin(deltaLongitude / 2);
-        double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-        double distance = earthRadius * c;
-        return distance;
-    }
-    private static double DegreeToRadian(double partsLatitude)
-    {
-        return partsLatitude * 180 / Math.PI;
-    }
-
-    public bool IsInCircle(Leaf lc, double R)
-    {
-        return Distance(this, lc) <= R;
+        if (!Overlap(current, searchingNode))
+        {
+            return;
+        }
+        if ((current.rightChild == null) && (current.leftChild == null))
+        {
+            foreach (Point point in current.points)
+            {
+                if (point.Distance(x, y) <= radius)
+                {
+                    result.Add(point);
+                }
+            }
+            return;
+        }
+        SearchInNode(current.leftChild, searchingNode, result, radius, x, y);
+        SearchInNode(current.rightChild, searchingNode, result, radius, x, y);
     }
 
-    public override string ToString()
+    private bool Overlap(RectNode first, RectNode second)
     {
-        return $"{longitude}" + ';' + $" {latitude}" + ';' + description;
-    }
+        Leaf leftTop1 = new Leaf(first.minLatitude, first.maxLongitude);
+        Leaf rightBottom1 = new Leaf(first.maxLatitude, first.minLongitude);
+        Leaf leftTop2 = new Leaf(second.minLatitude, second.maxLongitude);
+        Leaf rightBottom2 = new Leaf(second.maxLatitude, second.minLongitude);
 
+        if (rightBottom1.longitude > leftTop2.longitude || rightBottom2.longitude > leftTop1.longitude)
+        {
+            return false;
+        }
+        if (leftTop1.latitude > rightBottom2.latitude || leftTop2.latitude > rightBottom1.latitude)
+        {
+            return false;
+        }
+
+        return true;
+    }
 }
 
-class Rectangle
+class Point
 {
-    private Leaf LBC;
-    private Leaf RTC;
-    private Rectangle LCh;
-    private Rectangle RCh;
-    private bool div;
-    private List<Leaf> Points;
+    public double latitude;
+    public double longitude;
+    public string type1;
+    public string type2;
+    public string name1;
+    public string name2;
 
-    public static double MedianDL(List<Leaf> sample, bool dl)
+    public Point(double latitude, double longitude, string type1, string type2, string name1, string name2)
     {
-        int dim = sample.Count;
-        int i = 0;
-        double[] dovg = new double[dim];
-        foreach (var leaf in sample)
-        {
-            dovg[i] = (dl) ? leaf.longitude : leaf.latitude;
-        }
-        Array.Sort(dovg);
-        return (dim % 2 == 0) ? (dovg[dim / 2 - 1] + dovg[dim / 2]) / 2 : dovg[dim / 2 - 1];
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.type1 = type1;
+        this.type2 = type2;
+        this.name1 = name1;
+        this.name2 = name2;
     }
 
-    public Rectangle(Leaf LBC, Leaf RTC, bool div)
+    public double Distance(double latitude, double longitude)
     {
-        this.LBC = LBC;
-        this.RTC = RTC;
-        this.div = div;
-        double LBCLlong = (div) ? LBC.longitude : MedianDL(Points, !div);
-        double LBCLlatit = (!div) ? LBC.latitude : MedianDL(Points, div);
-        double LBCRlong = (div) ? MedianDL(Points, !div) : RTC.longitude;
-        double LBCRlatit = (!div) ? MedianDL(Points, div) : RTC.latitude;
+        return HaversineDistance(this.latitude, this.longitude, latitude, longitude);
+    }
 
-        Leaf LBCL = new Leaf(LBCLlong.ToString(), LBCLlong.ToString());
-        Leaf LBCR = new Leaf(LBCRlong.ToString(), LBCLlatit.ToString());
+    private static double HaversineDistance(double latitude1, double longitude1, double latitude2, double longitude2)
+    {
+        double earthRadius = 6371;
+        double radianLatitude = ToRadians(latitude2 - latitude1);
+        double radianLongitude = ToRadians(longitude2 - longitude1);
+        latitude1 = ToRadians(latitude1);
+        latitude2 = ToRadians(latitude2);
 
+        double firstCalc = Math.Sin(radianLatitude / 2) * Math.Sin(radianLatitude / 2) + Math.Sin(radianLongitude / 2) * Math.Sin(radianLongitude / 2) * Math.Cos(latitude1) * Math.Cos(latitude2);
+        double result = 2 * earthRadius * Math.Asin(Math.Sqrt(firstCalc));
+        return result;
+    }
+
+    private static double ToRadians(double angle)
+    {
+        return Math.PI * angle / 180.0;
+    }
+}
+
+class RectNode
+{
+    public double minLatitude;
+    public double maxLatitude;
+    public double minLongitude;
+    public double maxLongitude;
+    public List<Point> points;
+    public RectNode leftChild;
+    public RectNode rightChild;
+
+    public RectNode(double minLatitude, double maxLatitude, double minLongitude, double maxLongitude)
+    {
+        this.minLatitude = minLatitude;
+        this.maxLatitude = maxLatitude;
+        this.minLongitude = minLongitude;
+        this.maxLongitude = maxLongitude;
+        points = new List<Point>();
+    }
+
+    public void Add(Point p)
+    {
+        points.Add(p);
+    }
+
+    private double MedianDL(List<Point> points, Func<Point, double> selector)
+    {
+        List<double> values = new List<double>();
+        foreach (Point point in points)
+        {
+            values.Add(selector(point));
+        }
+
+        values.Sort();
+        int count = values.Count;
+        if (count % 2 == 0)
+        {
+            int midIndex1 = count / 2 - 1;
+            int midIndex2 = count / 2;
+            return (values[midIndex1] + values[midIndex2]) / 2;
+        }
+        else
+        {
+            int midIndex = count / 2;
+            return values[midIndex];
+        }
+    }
+
+    public void RectangleSplit()
+    {
+        if (points.Count <= 100)
+        {
+            return;
+        }
+
+        RectNode left;
+        RectNode right;
+        if (maxLatitude - minLatitude >= maxLongitude - minLongitude)
+        {
+            (left, right) = LatitudeSplit();
+
+        }
+        else
+        {
+            (left, right) = LongitudeSplit();
+
+        }
+        leftChild = left;
+        rightChild = right;
+        leftChild.RectangleSplit();
+        rightChild.RectangleSplit();
+
+        points = null;
+    }
+
+    private (RectNode left, RectNode right) LatitudeSplit()
+    {
+        double medianLatitude = MedianDL(points, point => point.latitude);
+        var left = new RectNode(minLatitude, medianLatitude, minLongitude, maxLongitude);
+        var right = new RectNode(medianLatitude, maxLatitude, minLongitude, maxLongitude);
+
+        foreach (Point p in points)
+        {
+            if (p.latitude <= medianLatitude)
+                left.Add(p);
+            else
+                right.Add(p);
+        }
+        return (left, right);
+    }
+
+    private (RectNode left, RectNode right) LongitudeSplit()
+    {
+        double medianLongitude = MedianDL(points, point => point.longitude);
+        var left = new RectNode(minLatitude, maxLatitude, minLongitude, medianLongitude);
+        var right = new RectNode(minLatitude, maxLatitude, medianLongitude, maxLongitude);
+
+        foreach (Point point in points)
+        {
+            if (point.longitude <= medianLongitude)
+                left.Add(point);
+            else
+                right.Add(point);
+        }
+        return (left, right);
     }
 }
