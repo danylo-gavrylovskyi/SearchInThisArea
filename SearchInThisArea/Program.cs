@@ -94,25 +94,25 @@ class RTree
         return result;
     }
 
-    private void SearchInNode(RectNode current, RectNode searchingNode, List<Point> result, double radius, double x, double y)
+    private void SearchInNode(RectNode currentNode, RectNode searchingNode, List<Point> result, double radius, double x, double y)
     {
-        if (!Overlap(current, searchingNode))
+        if (!Overlap(currentNode, searchingNode))
         {
             return;
         }
-        if ((current.rightChild == null) && (current.leftChild == null))
+        if ((currentNode.rightChild == null) && (currentNode.leftChild == null))
         {
-            foreach (Point point in current.points)
+            for (int i = 0; i < currentNode.points.Count; i++)
             {
-                if (point.Distance(x, y) <= radius)
+                if (currentNode.points[i].Distance(x, y) <= radius)
                 {
-                    result.Add(point);
+                    result.Add(currentNode.points[i]);
                 }
             }
             return;
         }
-        SearchInNode(current.leftChild, searchingNode, result, radius, x, y);
-        SearchInNode(current.rightChild, searchingNode, result, radius, x, y);
+        SearchInNode(currentNode.leftChild, searchingNode, result, radius, x, y);
+        SearchInNode(currentNode.rightChild, searchingNode, result, radius, x, y);
     }
 
     private bool Overlap(RectNode first, RectNode second)
@@ -126,11 +126,10 @@ class RTree
         {
             return false;
         }
-        if (leftTop1.latitude > rightBottom2.latitude || leftTop2.latitude > rightBottom1.latitude)
+        else if (leftTop1.latitude > rightBottom2.latitude || leftTop2.latitude > rightBottom1.latitude)
         {
             return false;
         }
-
         return true;
     }
 }
@@ -205,9 +204,9 @@ class RectNode
     private double MedianDL(List<Point> points, Func<Point, double> selector)
     {
         List<double> values = new List<double>();
-        foreach (Point point in points)
+        for (int i = 0; i < points.Count; i++)
         {
-            values.Add(selector(point));
+            values.Add(selector(points[i]));
         }
 
         values.Sort();
@@ -237,18 +236,15 @@ class RectNode
         if (maxLatitude - minLatitude >= maxLongitude - minLongitude)
         {
             (left, right) = LatitudeSplit();
-
         }
         else
         {
             (left, right) = LongitudeSplit();
-
         }
         leftChild = left;
         rightChild = right;
         leftChild.RectangleSplit();
         rightChild.RectangleSplit();
-
         points = null;
     }
 
@@ -258,12 +254,16 @@ class RectNode
         var left = new RectNode(minLatitude, medianLatitude, minLongitude, maxLongitude);
         var right = new RectNode(medianLatitude, maxLatitude, minLongitude, maxLongitude);
 
-        foreach (Point p in points)
+        for (int i = 0; i < points.Count; i++)
         {
-            if (p.latitude <= medianLatitude)
-                left.Add(p);
+            if (points[i].latitude <= medianLatitude)
+            {
+                left.Add(points[i]);
+            }
             else
-                right.Add(p);
+            {
+                right.Add(points[i]);
+            }
         }
         return (left, right);
     }
@@ -273,13 +273,16 @@ class RectNode
         double medianLongitude = MedianDL(points, point => point.longitude);
         var left = new RectNode(minLatitude, maxLatitude, minLongitude, medianLongitude);
         var right = new RectNode(minLatitude, maxLatitude, medianLongitude, maxLongitude);
-
-        foreach (Point point in points)
+        for (int i = 0; i < points.Count; i++)
         {
-            if (point.longitude <= medianLongitude)
-                left.Add(point);
+            if (points[i].longitude <= medianLongitude)
+            {
+                left.Add(points[i]);
+            }
             else
-                right.Add(point);
+            {
+                right.Add(points[i]);
+            }
         }
         return (left, right);
     }
